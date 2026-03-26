@@ -34,8 +34,7 @@ class ClopeClustersCollection {
         const deltaNew = transactionLength / Math.pow(transactionLength, this.r);
 
         if (deltaNew > bestDelta) {
-            const result = this.addCluster();
-            bestCluster = result;
+            bestCluster = this.addCluster();
         }
 
         return bestCluster;

@@ -3,10 +3,11 @@ const readline = require('readline');
 const BaseDao = require('./baseDao');
 
 class FileDao extends BaseDao {
-    constructor(_fileName, _clusterIdHolder) {
+    constructor(_fileName, _fileLineLength, _clusterIdHolder) {
         super();
         this.fileName = _fileName;
         this.clusterIdHolder = _clusterIdHolder;
+        this.clusteredLineLength = _fileLineLength + this.clusterIdHolder.length + 1;
     }
 
     async init() {
@@ -21,38 +22,51 @@ class FileDao extends BaseDao {
         return formatedId === this.clusterIdHolder ? null : parseInt(formatedId, 10).toString();
     }
 
-    async processTransactions (onProcessTransactionCallback) {
+    async processTransactions(onProcessTransactionCallback) {
         let movedCount = 0;
-        const tmpFile = this.clusteredFileName + '.tmp';
-        const readStream = fs.createReadStream(this.clusteredFileName);
-        const writeStream = fs.createWriteStream(tmpFile);
-        const rl = readline.createInterface({
-            input: readStream,
-            crlfDelay: Infinity
-        });
+        const fileWRDescriptor = await fs.promises.open(this.clusteredFileName, 'r+');
+        const buffer = Buffer.alloc(this.clusteredLineLength);
 
-        for await (const line of rl) {
-            const transaction = line.trim().split(',');
-            const currentClusterInFileId = transaction.pop();
-            const currentClusterId = this.deformatClusterId(currentClusterInFileId);
-            // do not use edible sign in transaction
-            const edibleSign = transaction.shift();
-            const newClusterInFileId = this.formatClusterId(
-                onProcessTransactionCallback(transaction, currentClusterId, edibleSign)
-            );
+        let lineIndex = 0;
 
-            if (newClusterInFileId !== currentClusterInFileId) {
-                movedCount++;
+        try {
+            while (true) {
+                const { bytesRead } = await fileWRDescriptor.read(buffer, 0, this.clusteredLineLength);
+
+                if (bytesRead !== this.clusteredLineLength) {
+                    break;
+                }
+
+                const line = buffer.toString('utf8');
+
+                if (line.at(-1) !== '\n') {
+                    throw 'Incorrect input file';
+                }
+
+                const transaction = line.trim().split(',');
+                const currentClusterInFileId = transaction.pop();
+                const edibleSign = transaction.shift();
+                const currentClusterId = this.deformatClusterId(currentClusterInFileId);
+
+                const newId = onProcessTransactionCallback(transaction, currentClusterId, edibleSign);
+                const newClusterInFileId = this.formatClusterId(newId);
+
+                if (newClusterInFileId !== currentClusterInFileId) {
+                    movedCount++;
+                    const idWriteOffset = (lineIndex * this.clusteredLineLength) +
+                        (this.clusteredLineLength - 1 - this.clusterIdHolder.length);
+                    await fileWRDescriptor.write(newClusterInFileId, idWriteOffset, 'utf8');
+                }
+
+                lineIndex++;
             }
-
-            writeStream.write(`${edibleSign},${transaction.join(',')},${newClusterInFileId}\n`);
+        } finally {
+            await fileWRDescriptor.close();
         }
-
-        await fs.promises.unlink(this.clusteredFileName);
-        await fs.promises.rename(tmpFile, this.clusteredFileName);
 
         return movedCount;
     }
+
 
     async prepareData () {
         const readStream = fs.createReadStream(this.fileName);
