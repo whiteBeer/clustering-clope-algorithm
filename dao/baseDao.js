@@ -3,6 +3,7 @@ class BaseDao {
 
     }
 
+    // extended classes should override this method
     processTransactions (onProcessTransaction) {
         const clusterId = onProcessTransaction();
     }

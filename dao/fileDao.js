@@ -2,10 +2,11 @@ const fs = require('fs');
 const readline = require('readline');
 const BaseDao = require('./baseDao');
 
-class FileSystem extends BaseDao {
-    constructor(_fileName) {
+class FileDao extends BaseDao {
+    constructor(_fileName, _clusterIdHolder) {
         super();
         this.fileName = _fileName;
+        this.clusterIdHolder = _clusterIdHolder;
     }
 
     async init() {
@@ -13,7 +14,11 @@ class FileSystem extends BaseDao {
     }
 
     formatClusterId(id) {
-        return id.toString().padStart(5, '0');
+        return id.toString().padStart(this.clusterIdHolder.length, '0');
+    }
+
+    deformatClusterId(formatedId) {
+        return formatedId === this.clusterIdHolder ? null : parseInt(formatedId, 10).toString();
     }
 
     async processTransactions (onProcessTransactionCallback) {
@@ -28,17 +33,19 @@ class FileSystem extends BaseDao {
 
         for await (const line of rl) {
             const transaction = line.trim().split(',');
-            const currentClusterId = transaction.pop();
+            const currentClusterInFileId = transaction.pop();
+            const currentClusterId = this.deformatClusterId(currentClusterInFileId);
+            // do not use edible sign in transaction
             const edibleSign = transaction.shift();
-            const newClusterId = this.formatClusterId(
-                onProcessTransactionCallback(transaction, parseInt(currentClusterId, 10).toString(), edibleSign)
+            const newClusterInFileId = this.formatClusterId(
+                onProcessTransactionCallback(transaction, currentClusterId, edibleSign)
             );
 
-            if (newClusterId !== currentClusterId) {
+            if (newClusterInFileId !== currentClusterInFileId) {
                 movedCount++;
             }
 
-            writeStream.write(`${edibleSign},${transaction.join(',')},${newClusterId}\n`);
+            writeStream.write(`${edibleSign},${transaction.join(',')},${newClusterInFileId}\n`);
         }
 
         await fs.promises.unlink(this.clusteredFileName);
@@ -62,10 +69,10 @@ class FileSystem extends BaseDao {
             }
             const transaction = trimmed.split(',');
             // with cluster id holder - XXXXX
-            writeStream.write(`${transaction.join(',')},XXXXX\n`);
+            writeStream.write(`${transaction.join(',')},${this.clusterIdHolder}\n`);
         }
         return clusteredDataFileName;
     }
 }
 
-module.exports = FileSystem;
+module.exports = FileDao;
