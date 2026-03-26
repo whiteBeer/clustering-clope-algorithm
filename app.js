@@ -4,7 +4,7 @@ const FileSystem = require('./dao/fileSystem');
 const Clope = require('./clopeAlgorithm');
 
 const r = 2.6;
-const inputFile = 'agaricus-lepiota.data';
+const inputFile = './agaricus-lepiota.data';
 
 async function main () {
     const dao = new FileSystem(inputFile);
@@ -12,7 +12,7 @@ async function main () {
     const clope = new Clope(r, dao);
 
     await clope.phase1();
-    // await clope.phase2();
+    await clope.phase2();
 }
 
 main().catch(error => {

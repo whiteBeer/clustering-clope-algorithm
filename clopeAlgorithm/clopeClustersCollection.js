@@ -7,11 +7,15 @@ class ClopeClustersCollection {
         this.r = r;
     }
 
-    addCluster() {
+    addCluster () {
         const id = (this.nextId++).toString();
         const cluster = new Cluster(id);
         this.clusters.set(id, cluster);
         return cluster;
+    }
+
+    deleteCluster (clusterId) {
+        this.clusters.delete(clusterId);
     }
 
     getTransactionBestCluster(transaction) {
@@ -26,7 +30,8 @@ class ClopeClustersCollection {
             }
         }
 
-        const deltaNew = transaction.length / Math.pow(transaction.length, this.r);
+        const transactionLength = transaction.filter(it => it !== '?').length;
+        const deltaNew = transactionLength / Math.pow(transactionLength, this.r);
 
         if (deltaNew > bestDelta) {
             const result = this.addCluster();

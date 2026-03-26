@@ -17,7 +17,7 @@ class FileSystem extends BaseDao {
     }
 
     async processTransactions (onProcessTransactionCallback) {
-        let changedCount = 0;
+        let movedCount = 0;
         const tmpFile = this.clusteredFileName + '.tmp';
         const readStream = fs.createReadStream(this.clusteredFileName);
         const writeStream = fs.createWriteStream(tmpFile);
@@ -29,21 +29,22 @@ class FileSystem extends BaseDao {
         for await (const line of rl) {
             const transaction = line.trim().split(',');
             const currentClusterId = transaction.pop();
+            const edibleSign = transaction.shift();
             const newClusterId = this.formatClusterId(
-                onProcessTransactionCallback(transaction, currentClusterId)
+                onProcessTransactionCallback(transaction, parseInt(currentClusterId, 10).toString(), edibleSign)
             );
 
             if (newClusterId !== currentClusterId) {
-                changedCount++;
+                movedCount++;
             }
 
-            writeStream.write(`${transaction.join(',')},${newClusterId}\n`);
+            writeStream.write(`${edibleSign},${transaction.join(',')},${newClusterId}\n`);
         }
 
         await fs.promises.unlink(this.clusteredFileName);
         await fs.promises.rename(tmpFile, this.clusteredFileName);
 
-        return changedCount;
+        return movedCount;
     }
 
     async prepareData () {
@@ -59,10 +60,8 @@ class FileSystem extends BaseDao {
             if (trimmed === '') {
                 continue;
             }
-            const cheaterTransaction = trimmed.split(',');
-            // remove the test marker edible/not edible
-            const transaction = cheaterTransaction.slice(1);
-            // with cluster id holder - 00000
+            const transaction = trimmed.split(',');
+            // with cluster id holder - XXXXX
             writeStream.write(`${transaction.join(',')},XXXXX\n`);
         }
         return clusteredDataFileName;
