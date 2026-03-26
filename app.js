@@ -12,7 +12,9 @@ async function main () {
     const clope = new Clope(r, dao);
 
     await clope.phase1();
-    await clope.phase2();
+    // await clope.phase2();
 }
 
-main();
+main().catch(error => {
+    console.error('Fatal Error:', error);
+});

@@ -1,5 +1,6 @@
 class Cluster {
-    constructor() {
+    constructor(_clusterId) {
+        this.clusterId = _clusterId;
         this.transactionCount = 0;
         this.area = 0;
         this.occ = new Map();
@@ -55,6 +56,10 @@ class Cluster {
 
     getTransactionCount () {
         return this.transactionCount;
+    }
+
+    getClusterId () {
+        return this.clusterId;
     }
 }
 

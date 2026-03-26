@@ -9,13 +9,12 @@ class ClopePhases {
 
     async phase1 () {
         await this.dao.processTransactions((transaction) => {
-            const bestCluster = this.clope.getTransactionCluster(transaction);
+            const bestCluster = this.clope.getTransactionBestCluster(transaction);
             bestCluster.addTransaction(transaction);
-            const clusterId = this.clope.clusters.indexOf(bestCluster);
-            return clusterId;
+            return bestCluster.getClusterId();
         });
 
-        console.log(`Phase 1 finished. Clusters created: ${this.clope.clusters.length}`);
+        console.log(`Phase 1 finished. Clusters created: ${this.clope.clusters.size}`);
     }
 
     async phase2 () {
