@@ -7,6 +7,8 @@ class FileDao extends BaseDao {
         super();
         this.fileName = _fileName;
         this.clusterIdHolder = _clusterIdHolder;
+        this.fileLineLength = _fileLineLength;
+        // +1 because need to add separator ","
         this.clusteredLineLength = _fileLineLength + this.clusterIdHolder.length + 1;
     }
 
@@ -38,10 +40,6 @@ class FileDao extends BaseDao {
                 }
 
                 const line = buffer.toString('utf8');
-
-                if (line.at(-1) !== '\n') {
-                    throw 'Incorrect input file';
-                }
 
                 const transaction = line.trim().split(',');
                 const currentClusterInFileId = transaction.pop();
@@ -76,14 +74,32 @@ class FileDao extends BaseDao {
             input: readStream,
             crlfDelay: Infinity
         });
+        let transactionLength = -1;
+        let currentLine = 0;
         for await (const line of rl) {
             const trimmed = line.trim();
+            // -1 because readline skips \n
+            if (trimmed.length !== this.fileLineLength - 1) {
+                throw `The length of one of the lines in the input file does not match. ` +
+                      `Unknown values should be replaced with "?".`;
+            }
             if (trimmed === '') {
-                continue;
+                throw 'Empty transactions is not allowed';
+            }
+            if (trimmed.indexOf(',') === -1) {
+                throw 'Values should be separated by ","';
             }
             const transaction = trimmed.split(',');
+            if (transactionLength === -1) {
+                transactionLength = transaction.length
+            }
+            if (transactionLength !== transaction.length || transaction.length === 0) {
+                throw `Line ${currentLine}. Invalid transaction length. ` +
+                      `Unknown values should be replaced with "?".`;
+            }
             // with cluster id holder - XXXXX
             writeStream.write(`${transaction.join(',')},${this.clusterIdHolder}\n`);
+            currentLine++;
         }
         return clusteredDataFileName;
     }

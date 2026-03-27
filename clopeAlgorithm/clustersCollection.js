@@ -1,6 +1,6 @@
 const Cluster = require('./cluster');
 
-class ClopeClustersCollection {
+class ClustersCollection {
     constructor(r = 2.6) {
         this.clusters = new Map();
         this.nextId = 1;
@@ -16,6 +16,10 @@ class ClopeClustersCollection {
 
     deleteCluster (clusterId) {
         this.clusters.delete(clusterId);
+    }
+
+    getClustersCount () {
+        return this.clusters.size;
     }
 
     getTransactionBestCluster(transaction) {
@@ -41,4 +45,4 @@ class ClopeClustersCollection {
     }
 }
 
-module.exports = ClopeClustersCollection;
+module.exports = ClustersCollection;

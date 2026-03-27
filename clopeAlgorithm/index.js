@@ -1,20 +1,20 @@
-const ClopeClustersCollection = require('./clopeClustersCollection');
+const ClustersCollection = require('./clustersCollection');
 
-class ClopePhases {
+class Clope {
     constructor(_r, _dao) {
         this.dao = _dao;
-        this.clope = new ClopeClustersCollection(_r);
+        this.clastersCollection = new ClustersCollection(_r);
     }
 
     async phase1 () {
         await this.dao.processTransactions((transaction) => {
-            const bestCluster = this.clope.getTransactionBestCluster(transaction);
+            const bestCluster = this.clastersCollection.getTransactionBestCluster(transaction);
             bestCluster.addTransaction(transaction);
             return bestCluster.getClusterId();
         });
 
-        console.log(`Phase 1 finished. Clusters count: ${this.clope.clusters.size}`);
-        for (const [id, cluster] of this.clope.clusters) {
+        console.log(`Phase 1 finished. Clusters count: ${this.clastersCollection.getClustersCount()}`);
+        for (const [id, cluster] of this.clastersCollection.clusters) {
             console.log(`Cluster ${id}: ${cluster.getTransactionCount()} transactions`);
         }
     }
@@ -25,11 +25,11 @@ class ClopePhases {
         do {
             iteration++;
             movedCount = await this.dao.processTransactions((transaction, currentClusterId) => {
-                const currentCluster = this.clope.clusters.get(currentClusterId);
+                const currentCluster = this.clastersCollection.clusters.get(currentClusterId);
                 if (currentCluster) {
                     currentCluster.removeTransaction(transaction);
                 }
-                const bestCluster = this.clope.getTransactionBestCluster(transaction);
+                const bestCluster = this.clastersCollection.getTransactionBestCluster(transaction);
                 bestCluster.addTransaction(transaction);
 
                 return bestCluster.getClusterId();
@@ -38,20 +38,20 @@ class ClopePhases {
         } while (movedCount > 0);
 
         let removedCount = 0;
-        for (const [id, cluster] of this.clope.clusters) {
+        for (const [id, cluster] of this.clastersCollection.clusters) {
             if (cluster.getTransactionCount() === 0) {
                 removedCount++;
-                this.clope.deleteCluster(id);
+                this.clastersCollection.deleteCluster(id);
             }
         }
 
         console.log(`Phase 2. Empty clusters removed: ${removedCount}`);
-        console.log(`Phase 2 finished. Clusters count: ${this.clope.clusters.size}`);
+        console.log(`Phase 2 finished. Clusters count: ${this.clastersCollection.getClustersCount()}`);
 
-        for (const [id, cluster] of this.clope.clusters) {
+        for (const [id, cluster] of this.clastersCollection.clusters) {
             console.log(`Cluster ${id}: ${cluster.getTransactionCount()} transactions`);
         }
     }
 }
 
-module.exports = ClopePhases;
+module.exports = Clope;

@@ -51,7 +51,9 @@ class Cluster {
         }
 
         const newProfit = (areaNew * (this.getTransactionCount() + 1)) / Math.pow(widthNew, r);
-        const oldProfit = this.getTransactionCount() === 0 ? 0 : (this.area * this.getTransactionCount()) / Math.pow(this.occ.size, r);
+        const oldProfit = (this.getTransactionCount() === 0) ? 0 : (
+            (this.area * this.getTransactionCount()) / Math.pow(this.occ.size, r)
+        );
 
         return newProfit - oldProfit;
     }
